@@ -473,7 +473,85 @@ JOIN이 많이 걸려있는 경우 성능상의 문제가 발생할 수 있다.
 
 ### 집합
 
+#### 집합 함수를 사용하는 경우
 
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(9)
+    @DisplayName("Group 함수 사용 테스트")
+    void groupUsingFunctionTest() {
+        // heights = {173, 175, 160, 183}
+        // weights = {73, 75, 60, 83}
+        List<Tuple> tuples = query
+                .select(soccerPlayer.count(),
+                        soccerPlayer.height.sum(),
+                        soccerPlayer.height.avg(),
+                        soccerPlayer.height.max(),
+                        soccerPlayer.height.min(),
+                        soccerPlayer.weight.sum(),
+                        soccerPlayer.weight.avg(),
+                        soccerPlayer.weight.max(),
+                        soccerPlayer.weight.min()
+                ).from(soccerPlayer)
+                .fetch();
+
+        Tuple tuple = tuples.get(0);
+        assertEquals(4, tuple.get(soccerPlayer.count()));
+        assertEquals(691, tuple.get(soccerPlayer.height.sum()));
+        assertEquals(172.75, tuple.get(soccerPlayer.height.avg()));
+        assertEquals(183, tuple.get(soccerPlayer.height.max()));
+        assertEquals(160, tuple.get(soccerPlayer.height.min()));
+        assertEquals(291, tuple.get(soccerPlayer.weight.sum()));
+        assertEquals(72.75, tuple.get(soccerPlayer.weight.avg()));
+        assertEquals(83, tuple.get(soccerPlayer.weight.max()));
+        assertEquals(60, tuple.get(soccerPlayer.weight.min()));
+    }
+}
+```
+
+#### GroupBy를 사용하는 경우
+
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(10)
+    @DisplayName("GroupBy 사용 테스트")
+    void groupUsingGroupByTest() {
+        // TeamA heights = {173, 175}, TeamB heights = {160, 183}
+        // TeamA weights = {73, 75}, TeamB weights = {60, 83}
+        List<Tuple> tuples = query
+                .select(team.name,
+                        soccerPlayer.height.avg(),
+                        soccerPlayer.weight.avg()
+                ).from(soccerPlayer)
+                .join(soccerPlayer.team, team)
+                .groupBy(team.name)
+                .fetch();
+
+        Tuple teamA = tuples.get(0);
+        Tuple teamB = tuples.get(1);
+
+        assertEquals("TeamA", teamA.get(team.name));
+        assertEquals((float) (173 + 175) / 2, teamA.get(soccerPlayer.height.avg()));
+        assertEquals((float) (73 + 75) / 2, teamA.get(soccerPlayer.weight.avg()));
+
+        assertEquals("TeamB", teamB.get(team.name));
+        assertEquals((float) (160 + 183) / 2, teamB.get(soccerPlayer.height.avg()));
+        assertEquals((float) (60 + 83) / 2, teamB.get(soccerPlayer.weight.avg()));
+    }
+}
+```
+
+---
+
+### Case
 
 
 

@@ -2,8 +2,8 @@ package com.roy.querydsl;
 
 
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.roy.querydsl.domain.QSoccerPlayer;
 import com.roy.querydsl.domain.SoccerPlayer;
 import com.roy.querydsl.domain.Team;
 import org.junit.jupiter.api.*;
@@ -15,7 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.EntityManager;
 import java.util.List;
 
-import static com.roy.querydsl.domain.QSoccerPlayer.*;
+import static com.roy.querydsl.domain.QSoccerPlayer.soccerPlayer;
+import static com.roy.querydsl.domain.QTeam.team;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.MethodOrderer.*;
 
@@ -27,7 +28,6 @@ public class QuerydslBasicGrammarTest {
     @Autowired
     private EntityManager entityManager;
     private JPAQueryFactory query;
-    private final QSoccerPlayer qSoccerPlayer = soccerPlayer;
 
     @BeforeEach
     void before() {
@@ -60,8 +60,8 @@ public class QuerydslBasicGrammarTest {
     @DisplayName("Querydsl을 사용한 파라미터 바인딩 테스트")
     void parameterBindingUsingQuerydsl() {
         SoccerPlayer storedPlayer = query
-                .selectFrom(qSoccerPlayer)
-                .where(qSoccerPlayer.name.eq("Roy"))
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
                 .fetchOne();
 
         assertNotNull(storedPlayer);
@@ -74,20 +74,20 @@ public class QuerydslBasicGrammarTest {
     void searchConditionAndChainingTest() {
         assertDoesNotThrow(() -> {
             SoccerPlayer storedPlayer = query
-                    .selectFrom(qSoccerPlayer)
-                    .where(qSoccerPlayer.name.eq("Roy")                      // name == "Roy"
-                            .and(qSoccerPlayer.name.ne("Perry"))             // name != "Perry"
-                            .and(qSoccerPlayer.name.eq("Perry").not())       // name != "Perry"
-                            .and(qSoccerPlayer.name.isNotNull())                   // name IS NOT NULL
-                            .and(qSoccerPlayer.name.in("Roy", "Perry"))     // name IN ("Roy", "Perry")
-                            .and(qSoccerPlayer.name.notIn("Roy", "Perry"))  // name NOT IN ("Roy", "Perry")
-                            .and(qSoccerPlayer.height.goe(180))              // height >= 180 (Greater Or Equal)
-                            .and(qSoccerPlayer.height.gt(180))               // height > 180 (Greater Than)
-                            .and(qSoccerPlayer.height.loe(190))              // height <= 190 (Less Or Equal)
-                            .and(qSoccerPlayer.height.lt(190))               // height < 190 (Less Than)
-                            .and(qSoccerPlayer.name.like("Ro%"))               // Like Ro%
-                            .and(qSoccerPlayer.name.contains("Roy"))               // Like %Roy%
-                            .and(qSoccerPlayer.name.startsWith("Ro")))             // Like Ro%
+                    .selectFrom(soccerPlayer)
+                    .where(soccerPlayer.name.eq("Roy")                      // name == "Roy"
+                            .and(soccerPlayer.name.ne("Perry"))             // name != "Perry"
+                            .and(soccerPlayer.name.eq("Perry").not())       // name != "Perry"
+                            .and(soccerPlayer.name.isNotNull())                   // name IS NOT NULL
+                            .and(soccerPlayer.name.in("Roy", "Perry"))     // name IN ("Roy", "Perry")
+                            .and(soccerPlayer.name.notIn("Roy", "Perry"))  // name NOT IN ("Roy", "Perry")
+                            .and(soccerPlayer.height.goe(180))              // height >= 180 (Greater Or Equal)
+                            .and(soccerPlayer.height.gt(180))               // height > 180 (Greater Than)
+                            .and(soccerPlayer.height.loe(190))              // height <= 190 (Less Or Equal)
+                            .and(soccerPlayer.height.lt(190))               // height < 190 (Less Than)
+                            .and(soccerPlayer.name.like("Ro%"))               // Like Ro%
+                            .and(soccerPlayer.name.contains("Roy"))               // Like %Roy%
+                            .and(soccerPlayer.name.startsWith("Ro")))             // Like Ro%
                     .fetchOne();
         });
     }
@@ -98,20 +98,20 @@ public class QuerydslBasicGrammarTest {
     void searchConditionAndParameterTest() {
         assertDoesNotThrow(() -> {
             SoccerPlayer storedPlayer = query
-                    .selectFrom(qSoccerPlayer)
-                    .where(qSoccerPlayer.name.eq("Roy"),
-                            qSoccerPlayer.name.ne("Perry"),
-                            qSoccerPlayer.name.eq("Perry").not(),
-                            qSoccerPlayer.name.isNotNull(),
-                            qSoccerPlayer.name.in("Roy", "Perry"),
-                            qSoccerPlayer.name.notIn("Roy", "Perry"),
-                            qSoccerPlayer.height.goe(180),
-                            qSoccerPlayer.height.gt(180),
-                            qSoccerPlayer.height.loe(190),
-                            qSoccerPlayer.height.lt(190),
-                            qSoccerPlayer.name.like("Ro%"),
-                            qSoccerPlayer.name.contains("Roy"),
-                            qSoccerPlayer.name.startsWith("Ro"))
+                    .selectFrom(soccerPlayer)
+                    .where(soccerPlayer.name.eq("Roy"),
+                            soccerPlayer.name.ne("Perry"),
+                            soccerPlayer.name.eq("Perry").not(),
+                            soccerPlayer.name.isNotNull(),
+                            soccerPlayer.name.in("Roy", "Perry"),
+                            soccerPlayer.name.notIn("Roy", "Perry"),
+                            soccerPlayer.height.goe(180),
+                            soccerPlayer.height.gt(180),
+                            soccerPlayer.height.loe(190),
+                            soccerPlayer.height.lt(190),
+                            soccerPlayer.name.like("Ro%"),
+                            soccerPlayer.name.contains("Roy"),
+                            soccerPlayer.name.startsWith("Ro"))
                     .fetchOne();
         });
     }
@@ -124,21 +124,21 @@ public class QuerydslBasicGrammarTest {
             // Fetch
             // List를 조회하고 데이터가 없다면 Empty List를 반환한다.
             List<SoccerPlayer> resultUsingFetch = query
-                    .selectFrom(qSoccerPlayer)
+                    .selectFrom(soccerPlayer)
                     .fetch();
 
             // FetchOne
             // 단 건 조회. 결과가 없으면 null, 결과가 둘 이상이면 com.querydsl.core.NonUniqueResultException
             SoccerPlayer resultUsingFetchOne = query
-                    .selectFrom(qSoccerPlayer)
-                    .where(qSoccerPlayer.name.eq("Roy"))
+                    .selectFrom(soccerPlayer)
+                    .where(soccerPlayer.name.eq("Roy"))
                     .fetchOne();
 
             // FetchFirst
             // limit(1).fetchOne();
             // 단 건을 조회해야하는데 여러 개의 결과가 나올 수 있을 때 사용.
             SoccerPlayer resultUsingFetchFirst = query
-                    .selectFrom(qSoccerPlayer)
+                    .selectFrom(soccerPlayer)
                     .fetchFirst();
 
             // FetchResults
@@ -202,6 +202,64 @@ public class QuerydslBasicGrammarTest {
         assertEquals(2, pageOfStoredPlayers.getLimit());
         assertEquals(1, pageOfStoredPlayers.getOffset());
         assertEquals(2, pageOfStoredPlayers.getResults().size());
+    }
+
+    @Test
+    @Order(9)
+    @DisplayName("Group 함수 사용 테스트")
+    void groupUsingFunctionTest() {
+        // heights = {173, 175, 160, 183}
+        // weights = {73, 75, 60, 83}
+        List<Tuple> tuples = query
+                .select(soccerPlayer.count(),
+                        soccerPlayer.height.sum(),
+                        soccerPlayer.height.avg(),
+                        soccerPlayer.height.max(),
+                        soccerPlayer.height.min(),
+                        soccerPlayer.weight.sum(),
+                        soccerPlayer.weight.avg(),
+                        soccerPlayer.weight.max(),
+                        soccerPlayer.weight.min()
+                ).from(soccerPlayer)
+                .fetch();
+
+        Tuple tuple = tuples.get(0);
+        assertEquals(4, tuple.get(soccerPlayer.count()));
+        assertEquals(691, tuple.get(soccerPlayer.height.sum()));
+        assertEquals(172.75, tuple.get(soccerPlayer.height.avg()));
+        assertEquals(183, tuple.get(soccerPlayer.height.max()));
+        assertEquals(160, tuple.get(soccerPlayer.height.min()));
+        assertEquals(291, tuple.get(soccerPlayer.weight.sum()));
+        assertEquals(72.75, tuple.get(soccerPlayer.weight.avg()));
+        assertEquals(83, tuple.get(soccerPlayer.weight.max()));
+        assertEquals(60, tuple.get(soccerPlayer.weight.min()));
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("GroupBy 사용 테스트")
+    void groupUsingGroupByTest() {
+        // TeamA heights = {173, 175}, TeamB heights = {160, 183}
+        // TeamA weights = {73, 75}, TeamB weights = {60, 83}
+        List<Tuple> tuples = query
+                .select(team.name,
+                        soccerPlayer.height.avg(),
+                        soccerPlayer.weight.avg()
+                ).from(soccerPlayer)
+                .join(soccerPlayer.team, team)
+                .groupBy(team.name)
+                .fetch();
+
+        Tuple teamA = tuples.get(0);
+        Tuple teamB = tuples.get(1);
+
+        assertEquals("TeamA", teamA.get(team.name));
+        assertEquals((float) (173 + 175) / 2, teamA.get(soccerPlayer.height.avg()));
+        assertEquals((float) (73 + 75) / 2, teamA.get(soccerPlayer.weight.avg()));
+
+        assertEquals("TeamB", teamB.get(team.name));
+        assertEquals((float) (160 + 183) / 2, teamB.get(soccerPlayer.height.avg()));
+        assertEquals((float) (60 + 83) / 2, teamB.get(soccerPlayer.weight.avg()));
     }
 
 }
