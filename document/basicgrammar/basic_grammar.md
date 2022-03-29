@@ -236,6 +236,105 @@ public class QSoccerPlayer extends EntityPathBase<SoccerPlayer> {
 
 ---
 
+### 검색 조건 쿼리
+
+검색 조건은 and, or로 체이닝할 수 있으며 JPQL에서 제공하는 모든 검색 조건을 제공한다.
+
+아래는 여러 조건을 체이닝한 테스트 코드이다.
+
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(3)
+    @DisplayName("검색 조건 And Chaining Test")
+    void searchConditionTest() {
+        assertDoesNotThrow(() -> {
+            SoccerPlayer storedPlayer = query
+                    .selectFrom(qSoccerPlayer)
+                    .where(qSoccerPlayer.name.eq("Roy")                      // name == "Roy"
+                            .and(qSoccerPlayer.name.ne("Perry"))             // name != "Perry"
+                            .and(qSoccerPlayer.name.eq("Perry").not())       // name != "Perry"
+                            .and(qSoccerPlayer.name.isNotNull())             // name IS NOT NULL
+                            .and(qSoccerPlayer.name.in("Roy", "Perry"))      // name IN ("Roy", "Perry")
+                            .and(qSoccerPlayer.name.notIn("Roy", "Perry"))   // name NOT IN ("Roy", "Perry")
+                            .and(qSoccerPlayer.height.goe(180))              // height >= 180 (Greater Or Equal)
+                            .and(qSoccerPlayer.height.gt(180))               // height > 180 (Greater Than)
+                            .and(qSoccerPlayer.height.loe(190))              // height <= 190 (Less Or Equal)
+                            .and(qSoccerPlayer.height.lt(190))               // height < 190 (Less Than)
+                            .and(qSoccerPlayer.name.like("Ro%"))             // Like Ro%
+                            .and(qSoccerPlayer.name.contains("Roy"))         // Like %Roy%
+                            .and(qSoccerPlayer.name.startsWith("Ro")))       // Like Ro%
+                    .fetchOne();
+        });
+    }
+}
+```
+
+이 때 발생한 쿼리는 아래와 같다.
+
+```sql
+select
+    soccerPlayer 
+from
+    SoccerPlayer soccerPlayer 
+where
+    soccerPlayer.name = ?1 
+    and soccerPlayer.name <> ?2 
+    and not soccerPlayer.name = ?3 
+    and soccerPlayer.name is not null 
+    and soccerPlayer.name in ?4 
+    and soccerPlayer.name not in ?5 
+    and soccerPlayer.height >= ?6 
+    and soccerPlayer.height > ?7 
+    and soccerPlayer.height <= ?8 
+    and soccerPlayer.height < ?9 
+    and soccerPlayer.name like ?10 escape '!' 
+    and soccerPlayer.name like ?11 escape '!' 
+    and soccerPlayer.name like ?12 escape '!'
+```
+
+또한 AND 조건을 파라미터로 처리 가능하다.
+
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(4)
+    @DisplayName("검색 조건 And Parameter Test")
+    void searchConditionAndParameterTest() {
+        assertDoesNotThrow(() -> {
+            SoccerPlayer storedPlayer = query
+                    .selectFrom(qSoccerPlayer)
+                    .where(qSoccerPlayer.name.eq("Roy"),
+                            qSoccerPlayer.name.ne("Perry"),
+                            qSoccerPlayer.name.eq("Perry").not(),
+                            qSoccerPlayer.name.isNotNull(),
+                            qSoccerPlayer.name.in("Roy", "Perry"),
+                            qSoccerPlayer.name.notIn("Roy", "Perry"),
+                            qSoccerPlayer.height.goe(180),
+                            qSoccerPlayer.height.gt(180),
+                            qSoccerPlayer.height.loe(190),
+                            qSoccerPlayer.height.lt(190),
+                            qSoccerPlayer.name.like("Ro%"),
+                            qSoccerPlayer.name.contains("Roy"),
+                            qSoccerPlayer.name.startsWith("Ro"))
+                    .fetchOne();
+        });
+    }
+}
+```
+
+이렇게 작성하는 경우 null 값은 무시되기 때문에 동적 쿼리를 생성에 유리하다.
+
+---
+
+### 결과 조회
+
 
 
 
