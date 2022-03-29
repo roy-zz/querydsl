@@ -335,6 +335,146 @@ public class QuerydslBasicGrammarTest {
 
 ### 결과 조회
 
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(5)
+    @DisplayName("결과 조회 테스트")
+    void searchResultTest() {
+        assertDoesNotThrow(() -> {
+            // Fetch
+            // List를 조회하고 데이터가 없다면 Empty List를 반환한다.
+            List<SoccerPlayer> resultUsingFetch = query
+                    .selectFrom(qSoccerPlayer)
+                    .fetch();
+
+            // FetchOne
+            // 단 건 조회. 결과가 없으면 null, 결과가 둘 이상이면 com.querydsl.core.NonUniqueResultException
+            SoccerPlayer resultUsingFetchOne = query
+                    .selectFrom(qSoccerPlayer)
+                    .where(qSoccerPlayer.name.eq("Roy"))
+                    .fetchOne();
+
+            // FetchFirst
+            // limit(1).fetchOne();
+            // 단 건을 조회해야하는데 여러 개의 결과가 나올 수 있을 때 사용.
+            SoccerPlayer resultUsingFetchFirst = query
+                    .selectFrom(qSoccerPlayer)
+                    .fetchFirst();
+
+            // FetchResults
+            // 페이징 정보를 포함, Total Count를 조회하는 쿼리가 추가로 실행된다.
+            QueryResults<SoccerPlayer> resultUsingFetchResults = query
+                    .selectFrom(soccerPlayer)
+                    .fetchResults();
+
+            // FetchCount
+            // Count 쿼리로 변경해서 Count 수 조회
+            long count = query
+                    .selectFrom(soccerPlayer)
+                    .fetchCount();
+        });
+    }
+}
+```
+
+---
+
+### 정렬
+
+Q 인스턴스의 필드에 desc(), asc(), nullsLast(), nullsFirst()를 사용하여 정렬을 사용할 수 있다.
+
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(6)
+    @DisplayName("정렬 테스트")
+    void sortTest() {
+        entityManager.persist(new SoccerPlayer("190H90WPlayer", 190, 90));
+        entityManager.persist(new SoccerPlayer("190H85WPlayer", 190, 85));
+        entityManager.persist(new SoccerPlayer("NullH100WPlayer", 190, null));
+        List<SoccerPlayer> storedPlayers = query
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.height.goe(188))
+                .orderBy(soccerPlayer.height.desc(), soccerPlayer.weight.asc().nullsFirst())
+                .fetch();
+
+        assertEquals("NullH100WPlayer", storedPlayers.get(0).getName());
+        assertEquals("190H85WPlayer", storedPlayers.get(1).getName());
+        assertEquals("190H90WPlayer", storedPlayers.get(2).getName());
+    }
+}
+```
+
+---
+
+### 페이징
+
+#### 조회된 내용만 필요한 경우
+
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(7)
+    @DisplayName("페이징 컨텐츠 조회 테스트")
+    void pagingOnlyContentTest() {
+        List<SoccerPlayer> storedPlayers = query
+                .selectFrom(soccerPlayer)
+                .orderBy(soccerPlayer.height.desc())
+                .offset(1)
+                .limit(2)
+                .fetch();
+
+        assertEquals(2, storedPlayers.size());
+    }
+}
+```
+
+#### 페이징에 대한 정보도 필요한 경우
+
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(8)
+    @DisplayName("페이징 데이터 및 컨텐츠 조회 테스트")
+    void pagingDataAndContentTest() {
+        QueryResults<SoccerPlayer> pageOfStoredPlayers = query
+                .selectFrom(soccerPlayer)
+                .orderBy(soccerPlayer.height.desc())
+                .offset(1)
+                .limit(2)
+                .fetchResults();
+
+        assertEquals(4, pageOfStoredPlayers.getTotal());
+        assertEquals(2, pageOfStoredPlayers.getLimit());
+        assertEquals(1, pageOfStoredPlayers.getOffset());
+        assertEquals(2, pageOfStoredPlayers.getResults().size());
+    }
+}
+```
+
+이렇게 조회하는 경우 카운트 쿼리도 같이 발생한다.
+JOIN이 많이 걸려있는 경우 성능상의 문제가 발생할 수 있다.
+성능 테스트를 진행해보고 카운트 쿼리에서 많은 시간이 소요된다면 카운트 쿼리를 직접 작성해서 성능을 개선해야한다.
+
+---
+
+### 집합
+
+
+
 
 
 

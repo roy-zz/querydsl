@@ -23,8 +23,8 @@ public class SoccerPlayer {
     @Column(name = "soccer_player_id")
     private Long id;
     private String name;
-    private int height;
-    private int weight;
+    private Integer height;
+    private Integer weight;
 
     @ManyToOne(fetch = LAZY, cascade = ALL)
     @JoinColumn(name = "team_id")
@@ -34,15 +34,15 @@ public class SoccerPlayer {
         this(name, 0);
     }
 
-    public SoccerPlayer(String name, int height) {
+    public SoccerPlayer(String name, Integer height) {
         this(name, height, 0);
     }
 
-    public SoccerPlayer(String name, int height, int weight) {
+    public SoccerPlayer(String name, Integer height, Integer weight) {
         this(name, height, weight, null);
     }
 
-    public SoccerPlayer(String name, int height, int weight, Team team) {
+    public SoccerPlayer(String name, Integer height, Integer weight, Team team) {
         this.name = name;
         this.height = height;
         this.weight = weight;

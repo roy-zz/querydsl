@@ -1,6 +1,7 @@
 package com.roy.querydsl;
 
 
+import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.roy.querydsl.domain.QSoccerPlayer;
 import com.roy.querydsl.domain.SoccerPlayer;
@@ -113,6 +114,94 @@ public class QuerydslBasicGrammarTest {
                             qSoccerPlayer.name.startsWith("Ro"))
                     .fetchOne();
         });
+    }
+
+    @Test
+    @Order(5)
+    @DisplayName("결과 조회 테스트")
+    void searchResultTest() {
+        assertDoesNotThrow(() -> {
+            // Fetch
+            // List를 조회하고 데이터가 없다면 Empty List를 반환한다.
+            List<SoccerPlayer> resultUsingFetch = query
+                    .selectFrom(qSoccerPlayer)
+                    .fetch();
+
+            // FetchOne
+            // 단 건 조회. 결과가 없으면 null, 결과가 둘 이상이면 com.querydsl.core.NonUniqueResultException
+            SoccerPlayer resultUsingFetchOne = query
+                    .selectFrom(qSoccerPlayer)
+                    .where(qSoccerPlayer.name.eq("Roy"))
+                    .fetchOne();
+
+            // FetchFirst
+            // limit(1).fetchOne();
+            // 단 건을 조회해야하는데 여러 개의 결과가 나올 수 있을 때 사용.
+            SoccerPlayer resultUsingFetchFirst = query
+                    .selectFrom(qSoccerPlayer)
+                    .fetchFirst();
+
+            // FetchResults
+            // 페이징 정보를 포함, Total Count를 조회하는 쿼리가 추가로 실행된다.
+            QueryResults<SoccerPlayer> resultUsingFetchResults = query
+                    .selectFrom(soccerPlayer)
+                    .fetchResults();
+
+            // FetchCount
+            // Count 쿼리로 변경해서 Count 수 조회
+            long count = query
+                    .selectFrom(soccerPlayer)
+                    .fetchCount();
+        });
+    }
+
+    @Test
+    @Order(6)
+    @DisplayName("정렬 테스트")
+    void sortTest() {
+        entityManager.persist(new SoccerPlayer("190H90WPlayer", 190, 90));
+        entityManager.persist(new SoccerPlayer("190H85WPlayer", 190, 85));
+        entityManager.persist(new SoccerPlayer("NullH100WPlayer", 190, null));
+        List<SoccerPlayer> storedPlayers = query
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.height.goe(188))
+                .orderBy(soccerPlayer.height.desc(), soccerPlayer.weight.asc().nullsFirst())
+                .fetch();
+
+        assertEquals("NullH100WPlayer", storedPlayers.get(0).getName());
+        assertEquals("190H85WPlayer", storedPlayers.get(1).getName());
+        assertEquals("190H90WPlayer", storedPlayers.get(2).getName());
+    }
+
+    @Test
+    @Order(7)
+    @DisplayName("페이징 컨텐츠 조회 테스트")
+    void pagingOnlyContentTest() {
+        List<SoccerPlayer> storedPlayers = query
+                .selectFrom(soccerPlayer)
+                .orderBy(soccerPlayer.height.desc())
+                .offset(1)
+                .limit(2)
+                .fetch();
+
+        assertEquals(2, storedPlayers.size());
+    }
+
+    @Test
+    @Order(8)
+    @DisplayName("페이징 데이터 및 컨텐츠 조회 테스트")
+    void pagingDataAndContentTest() {
+        QueryResults<SoccerPlayer> pageOfStoredPlayers = query
+                .selectFrom(soccerPlayer)
+                .orderBy(soccerPlayer.height.desc())
+                .offset(1)
+                .limit(2)
+                .fetchResults();
+
+        assertEquals(4, pageOfStoredPlayers.getTotal());
+        assertEquals(2, pageOfStoredPlayers.getLimit());
+        assertEquals(1, pageOfStoredPlayers.getOffset());
+        assertEquals(2, pageOfStoredPlayers.getResults().size());
     }
 
 }
