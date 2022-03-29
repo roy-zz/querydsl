@@ -4,6 +4,7 @@ package com.roy.querydsl;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.roy.querydsl.domain.SoccerPlayer;
@@ -316,6 +317,34 @@ public class QuerydslBasicGrammarTest {
                 tuple.get(soccerPlayer.name),
                 tuple.get(soccerPlayer.height),
                 tuple.get(rank)));
+    }
+
+    @Test
+    @Order(14)
+    @DisplayName("상수 최적화 테스트")
+    void optimizingConstantTest() {
+        Tuple result = query
+                .select(
+                        soccerPlayer.name,
+                        Expressions.constant("선수"))
+                .from(soccerPlayer)
+                .fetchFirst();
+
+        System.out.println("result: " + result);
+    }
+
+    @Test
+    @Order(15)
+    @DisplayName("문자 더하기 (Concat)")
+    void concatTest() {
+        List<String> result = query
+                .select(soccerPlayer.name
+                        .concat("의 키는 ")
+                        .concat(soccerPlayer.height.stringValue())
+                        .concat("입니다."))
+                .from(soccerPlayer)
+                .fetch();
+        result.forEach(System.out::println);
     }
 
 }

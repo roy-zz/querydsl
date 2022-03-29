@@ -645,10 +645,109 @@ name: Sally, height: 160, rank: 1
 
 ---
 
-### 
+### Constant & Character
 
+상수가 필요한 경우에는 Expressions.constant(${Char})을 사용한다.
 
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(14)
+    @DisplayName("상수 최적화 테스트")
+    void optimizingConstantTest() {
+        Tuple result = query
+                .select(
+                        soccerPlayer.name,
+                        Expressions.constant("선수"))
+                .from(soccerPlayer)
+                .fetchFirst();
+        System.out.println("result: " + result);
+    }
+}
+```
 
+출력은 아래와 같다.
+```bash
+result: [Roy, 선수]
+```
+
+하지만 발생한 쿼리에는 상수에 대한 언급이 없다.
+Querydsl에서 자체적으로 최적화를 하였기 때문이다.
+
+```sql
+select
+    soccerplay0_.name as col_0_0_ 
+from
+    soccer_player soccerplay0_ limit ?
+```
+
+#### 문자 더하기 (Concat)
+
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(15)
+    @DisplayName("문자 더하기 (Concat)")
+    void concatTest() {
+        List<String> result = query
+                .select(soccerPlayer.name
+                        .concat("의 팀은 ")
+                        .concat(soccerPlayer.team.name)
+                        .concat("입니다."))
+                .from(soccerPlayer)
+                .fetch();
+        result.forEach(System.out::println);
+    }
+}
+```
+
+출력 결과는 아래와 같다.
+
+```bash
+Roy의 팀은 TeamA입니다.
+Perry의 팀은 TeamA입니다.
+Sally의 팀은 TeamB입니다.
+Dice의 팀은 TeamB입니다.
+```
+
+사실 아래와 같이 키 정보를 출력하려 하였으나 예상치 못한 결과가 출력되었고 원인을 파악하지 못하였다.
+원인은 추후에 찾고 **문자열이 아닌 타입을 Concat할 때는 .stringValue()**를 붙여주어야 한다.
+
+```java
+@Transactional
+@SpringBootTest
+@TestMethodOrder(value = OrderAnnotation.class)
+public class QuerydslBasicGrammarTest {
+    @Test
+    @Order(15)
+    @DisplayName("문자 더하기 (Concat)")
+    void concatTest() {
+        List<String> result = query
+                .select(soccerPlayer.name
+                        .concat("의 키는 ")
+                        .concat(soccerPlayer.height.stringValue())
+                        .concat("입니다."))
+                .from(soccerPlayer)
+                .fetch();
+        result.forEach(System.out::println);
+    }
+}
+```
+
+실패한 출력 결과는 아래와 같다.
+
+```bash
+Roy의 키는 1입니다.
+Perry의 키는 1입니다.
+Sally의 키는 1입니다.
+Dice의 키는 1입니다.
+```
 
 ---
 
