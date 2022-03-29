@@ -3,6 +3,8 @@ package com.roy.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.roy.querydsl.domain.SoccerPlayer;
 import com.roy.querydsl.domain.Team;
@@ -260,6 +262,60 @@ public class QuerydslBasicGrammarTest {
         assertEquals("TeamB", teamB.get(team.name));
         assertEquals((float) (160 + 183) / 2, teamB.get(soccerPlayer.height.avg()));
         assertEquals((float) (60 + 83) / 2, teamB.get(soccerPlayer.weight.avg()));
+    }
+
+    @Test
+    @Order(11)
+    @DisplayName("단순한 조건 Case 테스트")
+    void simpleCaseTest() {
+        List<String> result = query
+                .select(soccerPlayer.team.name
+                        .when("TeamA").then("TeamA에 속한 선수")
+                        .when("TeamB").then("TeamB에 속한 선수")
+                        .otherwise("다른 팀에 속한 선수"))
+                .from(soccerPlayer)
+                .fetch();
+        result.forEach(i -> System.out.println("result = " + i));
+    }
+
+    @Test
+    @Order(12)
+    @DisplayName("복잡한 조건 Case 테스트")
+    void complexCaseTest() {
+        List<String> result = query
+                .select(new CaseBuilder()
+                        .when(soccerPlayer.height.between(0, 160)).then("0cm ~ 160cm")
+                        .when(soccerPlayer.height.between(160, 170)).then("160cm ~ 170cm")
+                        .when(soccerPlayer.height.between(170, 180)).then("170cm ~ 180cm")
+                        .when(soccerPlayer.height.between(180, 190)).then("180cm ~ 190cm")
+                        .otherwise("진격의 거인"))
+                .from(soccerPlayer)
+                .fetch();
+    }
+
+    @Test
+    @Order(13)
+    @DisplayName("OrderBy 내부에 Case 사용 테스트")
+    void caseInOrderByTest() {
+        // 180cm가 넘는 선수 -> 170cm ~ 180cm -> 160cm ~ 170cm -> 0cm ~ 160cm 순으로 출력
+        NumberExpression<Integer> rank = new CaseBuilder()
+                .when(soccerPlayer.height.between(0, 160)).then(1)
+                .when(soccerPlayer.height.between(160, 170)).then(2)
+                .when(soccerPlayer.height.between(170, 180)).then(3)
+                .otherwise(4);
+
+        List<Tuple> tuples = query
+                .select(soccerPlayer.name,
+                        soccerPlayer.height,
+                        rank)
+                .from(soccerPlayer)
+                .orderBy(rank.desc())
+                .fetch();
+
+        tuples.forEach(tuple -> System.out.printf("name: %s, height: %s, rank: %s%n",
+                tuple.get(soccerPlayer.name),
+                tuple.get(soccerPlayer.height),
+                tuple.get(rank)));
     }
 
 }
