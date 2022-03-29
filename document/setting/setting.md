@@ -113,8 +113,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
     // querydsl ---------------------------------------------
-    implementation 'com.querydsl:querydsl-jpa:5.0.0'
-    implementation 'com.querydsl:querydsl-apt:5.0.0'
+    implementation 'com.querydsl:querydsl-jpa:5.0.0' // Querydsl 라이브러리
+    implementation 'com.querydsl:querydsl-apt:5.0.0' // Querydsl 관련 코드 생성을 담당
     // querydsl ---------------------------------------------
 
     compileOnly 'org.projectlombok:lombok'
@@ -189,11 +189,38 @@ Q 타입 클래스의 경우 컴파일 시점에서 생성되는 파일이기 �
 
 ---
 
+### 테스트 코드로 Q 파일 정상 작동 테스트
 
+단순히 엔티티를 저장하고 Q 파일을 사용하여 데이터를 조회하는 테스트를 진행해본다. 
+설정에 문제가 없다면 정상적으로 테스트를 통과할 것이다.
 
+```java
+@Transactional
+@SpringBootTest
+class SoccerPlayerTest {
 
+    @Autowired
+    private EntityManager entityManager;
 
+    @Test
+    @DisplayName("Querydsl 정상 작동 테스트")
+    void querydslSettingTest() {
+        SoccerPlayer newSoccerPlayer = new SoccerPlayer();
+        entityManager.persist(newSoccerPlayer);
 
+        JPAQueryFactory query = new JPAQueryFactory(entityManager);
+        
+        QSoccerPlayer soccerPlayer = QSoccerPlayer.soccerPlayer;
+
+        SoccerPlayer storedPlayer = query
+                .selectFrom(soccerPlayer)
+                .fetchOne();
+
+        assertEquals(newSoccerPlayer, storedPlayer);
+        assertEquals(newSoccerPlayer.getId(), storedPlayer.getId());
+    }
+}
+```
 
 ---
 
