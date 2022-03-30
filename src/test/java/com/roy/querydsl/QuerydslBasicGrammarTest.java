@@ -6,7 +6,9 @@ import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.roy.querydsl.domain.QSoccerPlayer;
 import com.roy.querydsl.domain.SoccerPlayer;
 import com.roy.querydsl.domain.Team;
 import org.hibernate.Hibernate;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.EntityManager;
 import java.util.List;
 
+import static com.querydsl.jpa.JPAExpressions.*;
 import static com.roy.querydsl.domain.QSoccerPlayer.soccerPlayer;
 import static com.roy.querydsl.domain.QTeam.team;
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,6 +35,11 @@ public class QuerydslBasicGrammarTest {
     @Autowired
     private EntityManager entityManager;
     private JPAQueryFactory query;
+
+    private void flushAndClear() {
+        entityManager.flush();
+        entityManager.clear();
+    }
 
     @BeforeEach
     void before() {
@@ -459,9 +467,87 @@ public class QuerydslBasicGrammarTest {
         assertTrue(Hibernate.isInitialized(storedPlayer.getTeam()));
     }
 
-    private void flushAndClear() {
-        entityManager.flush();
-        entityManager.clear();
+    @Test
+    @Order(22)
+    @DisplayName("서브 쿼리 EQ 테스트")
+    void subQueryEqTest() {
+        QSoccerPlayer subQPlayer = new QSoccerPlayer("subQPlayer");
+        SoccerPlayer tallestPlayer = query
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.height.eq(
+                        select(subQPlayer.height.max())
+                                .from(subQPlayer)))
+                .fetchOne();
+
+        assertNotNull(tallestPlayer);
+        assertEquals("Dice", tallestPlayer.getName());
+    }
+
+    @Test
+    @Order(23)
+    @DisplayName("서브 쿼리 GOE 테스트")
+    void subQueryGoeTest() {
+        QSoccerPlayer subQPlayer = new QSoccerPlayer("subQPlayer");
+        Double averageHeight = query
+                .select(soccerPlayer.height.avg())
+                .from(soccerPlayer)
+                .fetchOne();
+
+        List<SoccerPlayer> tallerThanAvgPlayers = query
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.height.goe(
+                        select(subQPlayer.height.avg())
+                                .from(subQPlayer)))
+                .fetch();
+
+        assertTrue(tallerThanAvgPlayers.size() > 0);
+        tallerThanAvgPlayers.forEach(player -> {
+            assertTrue(player.getHeight() > averageHeight);
+        });
+    }
+
+    @Test
+    @Order(24)
+    @DisplayName("서브 쿼리 IN 테스트")
+    void subQueryInTest() {
+        QSoccerPlayer subQPlayer = new QSoccerPlayer("subQPlayer");
+        Double averageHeight = query
+                .select(soccerPlayer.height.avg())
+                .from(soccerPlayer)
+                .fetchOne();
+
+        List<SoccerPlayer> minMaxPlayers = query
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.name.in(
+                        select(subQPlayer.name)
+                                .from(subQPlayer)
+                                .where(soccerPlayer.height.gt(averageHeight))
+                )).fetch();
+
+        minMaxPlayers.forEach(player -> {
+            assertTrue(player.getHeight() > averageHeight);
+        });
+    }
+
+    @Test
+    @Order(25)
+    @DisplayName("SELECT에 서브 쿼리 사용 테스트")
+    void subQueryInSelectTest() {
+        QSoccerPlayer subQPlayer = new QSoccerPlayer("subQPlayer");
+        List<Tuple> tuples = query
+                .select(soccerPlayer.name,
+                        soccerPlayer.height,
+                        select(subQPlayer.height.avg())
+                                .from(subQPlayer))
+                .from(soccerPlayer)
+                .fetch();
+
+        tuples.forEach(tuple -> {
+            String name = tuple.get(soccerPlayer.name);
+            Integer height = tuple.get(soccerPlayer.height);
+            Double avgHeight = tuple.get(select(subQPlayer.height.avg()).from(subQPlayer));
+            System.out.printf("%s의 키는 %s입니다. 모든 선수의 평균 키는 %s입니다.%n", name, height, avgHeight);
+        });
     }
 
 }
