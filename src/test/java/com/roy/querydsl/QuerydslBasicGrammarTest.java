@@ -3,6 +3,8 @@ package com.roy.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
@@ -11,6 +13,9 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.roy.querydsl.domain.QSoccerPlayer;
 import com.roy.querydsl.domain.SoccerPlayer;
 import com.roy.querydsl.domain.Team;
+import com.roy.querydsl.dto.QSoccerPlayerDTO;
+import com.roy.querydsl.dto.SoccerPlayerDTO;
+import com.roy.querydsl.dto.StrangeSoccerPlayerDTO;
 import org.hibernate.Hibernate;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
@@ -548,6 +553,139 @@ public class QuerydslBasicGrammarTest {
             Double avgHeight = tuple.get(select(subQPlayer.height.avg()).from(subQPlayer));
             System.out.printf("%s의 키는 %s입니다. 모든 선수의 평균 키는 %s입니다.%n", name, height, avgHeight);
         });
+    }
+
+    @Test
+    @Order(26)
+    @DisplayName("Tuple을 사용한 프로젝션 테스트")
+    void projectionUsingTupleTest() {
+        List<Tuple> tuples = query
+                .select(
+                        soccerPlayer.name,
+                        soccerPlayer.height)
+                .from(soccerPlayer)
+                .fetch();
+
+        tuples.forEach(tuple -> {
+            System.out.println("선수의 이름: " + tuple.get(soccerPlayer.name));
+            System.out.println("선수의 키: " + tuple.get(soccerPlayer.height));
+        });
+    }
+
+    @Test
+    @Order(27)
+    @DisplayName("순수 JPA DTO 조회 테스트")
+    void pureJpaFindDTOTest() {
+        assertDoesNotThrow(() -> {
+            entityManager.createQuery(
+                            "SELECT new com.roy.querydsl.dto.SoccerPlayerDTO(SP.name, SP.height) " +
+                                    "FROM SoccerPlayer SP " +
+                                    "WHERE SP.name = :name ", SoccerPlayerDTO.class)
+                    .setParameter("name", "Roy")
+                    .getSingleResult();
+        });
+    }
+
+    @Test
+    @Order(28)
+    @DisplayName("DTO 조회 프로퍼티 접근 테스트")
+    void createDTOPropertyAccess() {
+        SoccerPlayerDTO pureJpaDTO = entityManager.createQuery(
+                        "SELECT new com.roy.querydsl.dto.SoccerPlayerDTO(SP.name, SP.height) " +
+                                "FROM SoccerPlayer SP " +
+                                "WHERE SP.name = :name ", SoccerPlayerDTO.class)
+                .setParameter("name", "Roy")
+                .getSingleResult();
+
+        SoccerPlayerDTO dslDTO = query
+                .select(Projections.bean(SoccerPlayerDTO.class,
+                        soccerPlayer.name, soccerPlayer.height))
+                .from(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchOne();
+
+        assertEquals(dslDTO, pureJpaDTO);
+    }
+
+    @Test
+    @Order(29)
+    @DisplayName("DTO 조회 필드 직접 접근 테스트")
+    void createDTOFieldAccess() {
+        SoccerPlayerDTO pureJpaDTO = entityManager.createQuery(
+                        "SELECT new com.roy.querydsl.dto.SoccerPlayerDTO(SP.name, SP.height) " +
+                                "FROM SoccerPlayer SP " +
+                                "WHERE SP.name = :name ", SoccerPlayerDTO.class)
+                .setParameter("name", "Roy")
+                .getSingleResult();
+
+        SoccerPlayerDTO dslDTO = query
+                .select(Projections.fields(SoccerPlayerDTO.class,
+                        soccerPlayer.name, soccerPlayer.height))
+                .from(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchOne();
+
+        assertEquals(dslDTO, pureJpaDTO);
+    }
+
+    @Test
+    @Order(30)
+    @DisplayName("DTO 조회 생성자 사용 테스트")
+    void createDTOUsingConstructorTest() {
+        SoccerPlayerDTO pureJpaDTO = entityManager.createQuery(
+                        "SELECT new com.roy.querydsl.dto.SoccerPlayerDTO(SP.name, SP.height) " +
+                                "FROM SoccerPlayer SP " +
+                                "WHERE SP.name = :name ", SoccerPlayerDTO.class)
+                .setParameter("name", "Roy")
+                .getSingleResult();
+
+        SoccerPlayerDTO dslDTO = query
+                .select(Projections.constructor(SoccerPlayerDTO.class,
+                        soccerPlayer.name, soccerPlayer.height))
+                .from(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchOne();
+
+        assertEquals(dslDTO, pureJpaDTO);
+    }
+
+    @Test
+    @Order(31)
+    @DisplayName("필드명이 다른 DTO 조회 테스트")
+    void notEqualFieldNameTest() {
+        StrangeSoccerPlayerDTO strangeDto = query
+                .select(Projections.fields(StrangeSoccerPlayerDTO.class,
+                        soccerPlayer.name.as("whatYourName"),
+                        ExpressionUtils.as(
+                                soccerPlayer.height, "howTallAreYou")))
+                .from(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchOne();
+
+        assertNotNull(strangeDto.getWhatYourName());
+        assertNotNull(strangeDto.getHowTallAreYou());
+        assertEquals("Roy", strangeDto.getWhatYourName());
+        assertEquals(173, strangeDto.getHowTallAreYou());
+    }
+
+    @Test
+    @Order(32)
+    @DisplayName("DTO 조회 @QueryProjection 테스트")
+    void createDTOQueryProjection() {
+        SoccerPlayerDTO pureJpaDTO = entityManager.createQuery(
+                        "SELECT new com.roy.querydsl.dto.SoccerPlayerDTO(SP.name, SP.height) " +
+                                "FROM SoccerPlayer SP " +
+                                "WHERE SP.name = :name ", SoccerPlayerDTO.class)
+                .setParameter("name", "Roy")
+                .getSingleResult();
+
+        SoccerPlayerDTO dslDTO = query
+                .select(new QSoccerPlayerDTO(soccerPlayer.name, soccerPlayer.height))
+                .from(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchOne();
+
+        assertEquals(dslDTO, pureJpaDTO);
     }
 
 }
