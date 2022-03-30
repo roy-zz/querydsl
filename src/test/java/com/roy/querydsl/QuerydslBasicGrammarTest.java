@@ -9,6 +9,7 @@ import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.roy.querydsl.domain.SoccerPlayer;
 import com.roy.querydsl.domain.Team;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -345,6 +346,122 @@ public class QuerydslBasicGrammarTest {
                 .from(soccerPlayer)
                 .fetch();
         result.forEach(System.out::println);
+    }
+
+    @Test
+    @Order(16)
+    @DisplayName("기본 조인 테스트")
+    void defaultJoinTest() {
+        // Inner Join
+        List<SoccerPlayer> storedPlayers = query
+                .selectFrom(soccerPlayer)
+                .join(soccerPlayer.team, team)
+                .where(team.name.eq("TeamA"))
+                .fetch();
+
+        storedPlayers.forEach(player ->
+                assertTrue(player.getName().equals("Roy")
+                        || player.getName().equals("Perry"))
+        );
+
+        assertDoesNotThrow(() -> {
+            // Inner Join
+            query
+                    .selectFrom(soccerPlayer)
+                    .innerJoin(soccerPlayer.team, team)
+                    .fetch();
+
+            // Left Outer Join
+            query
+                    .selectFrom(soccerPlayer)
+                    .leftJoin(soccerPlayer.team, team)
+                    .fetch();
+
+            // Right Outer Join
+            query
+                    .selectFrom(soccerPlayer)
+                    .rightJoin(soccerPlayer.team, team)
+                    .fetch();
+        });
+    }
+
+    @Test
+    @Order(17)
+    @DisplayName("세타 조인 테스트")
+    void thetaJoinTest() {
+        entityManager.persist(new SoccerPlayer("TeamA"));
+
+        List<SoccerPlayer> storedPlayers = query
+                .select(soccerPlayer)
+                .from(soccerPlayer, team)
+                .where(soccerPlayer.name.eq(team.name))
+                .fetch();
+
+        storedPlayers.forEach(player -> assertEquals(player.getName(), "TeamA"));
+    }
+
+    @Test
+    @Order(18)
+    @DisplayName("조인 ON 필터링 테스트")
+    void joinOnFilteringTest() {
+        assertDoesNotThrow(() -> {
+            List<Tuple> result = query
+                    .select(soccerPlayer, team)
+                    .from(soccerPlayer)
+                    .leftJoin(soccerPlayer.team, team).on(team.name.eq("TeamA"))
+                    .fetch();
+
+            result.forEach(tuple -> System.out.println("tuple = " + tuple));
+        });
+    }
+
+    @Test
+    @Order(19)
+    @DisplayName("조인 ON 조건 테스트")
+    void joinOnConditionTest() {
+        entityManager.persist(new SoccerPlayer("TeamA"));
+        assertDoesNotThrow(() -> {
+            List<Tuple> result = query
+                    .select(soccerPlayer, team)
+                    .from(soccerPlayer)
+                    .leftJoin(team).on(soccerPlayer.name.eq(team.name))
+                    .fetch();
+            result.forEach(tuple -> System.out.println("tuple = " + tuple));
+        });
+    }
+
+    @Test
+    @Order(20)
+    @DisplayName("페치 조인 미적용 테스트")
+    void notAppliedFetchJoinTest() {
+        flushAndClear();
+        SoccerPlayer storedPlayer = query
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchOne();
+
+        assertNotNull(storedPlayer.getTeam());
+        assertFalse(Hibernate.isInitialized(storedPlayer.getTeam()));
+    }
+
+    @Test
+    @Order(21)
+    @DisplayName("페치 조인 적용 테스트")
+    void appliedFetchJoinTest() {
+        flushAndClear();
+        SoccerPlayer storedPlayer = query
+                .selectFrom(soccerPlayer)
+                .join(soccerPlayer.team, team).fetchJoin()
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchOne();
+
+        assertNotNull(storedPlayer.getTeam());
+        assertTrue(Hibernate.isInitialized(storedPlayer.getTeam()));
+    }
+
+    private void flushAndClear() {
+        entityManager.flush();
+        entityManager.clear();
     }
 
 }
