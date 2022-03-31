@@ -10,7 +10,6 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.roy.querydsl.domain.QSoccerPlayer;
 import com.roy.querydsl.domain.SoccerPlayer;
@@ -18,17 +17,16 @@ import com.roy.querydsl.domain.Team;
 import com.roy.querydsl.dto.QSoccerPlayerDTO;
 import com.roy.querydsl.dto.SoccerPlayerDTO;
 import com.roy.querydsl.dto.StrangeSoccerPlayerDTO;
+import com.roy.querydsl.repository.SoccerPlayerRepository;
 import org.hibernate.Hibernate;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.platform.commons.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 import java.util.List;
-import java.util.Objects;
 
 import static com.querydsl.jpa.JPAExpressions.*;
 import static com.roy.querydsl.domain.QSoccerPlayer.soccerPlayer;
@@ -45,6 +43,9 @@ public class QuerydslBasicGrammarTest {
 
     @Autowired
     private EntityManager entityManager;
+    @Autowired
+    private SoccerPlayerRepository soccerPlayerRepository;
+
     private JPAQueryFactory query;
 
     private void flushAndClear() {
@@ -815,6 +816,16 @@ public class QuerydslBasicGrammarTest {
                 .fetchFirst();
 
         assertEquals("Roy", roy.getName());
+    }
+
+    @Test
+    @Order(39)
+    @DisplayName("QuerydslPredicateExecutor 테스트")
+    void querydslPredicateExecutorTest() {
+        Iterable<SoccerPlayer> result = soccerPlayerRepository.findAll(
+                soccerPlayer.height.gt(170)
+                        .and(soccerPlayer.weight.lt(70))
+        );
     }
 
 }

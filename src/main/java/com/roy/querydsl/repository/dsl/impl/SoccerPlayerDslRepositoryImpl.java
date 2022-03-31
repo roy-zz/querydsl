@@ -5,9 +5,11 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.PathBuilder;
+import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.roy.querydsl.domain.QSoccerPlayer;
+import com.roy.querydsl.domain.SoccerPlayer;
 import com.roy.querydsl.dto.QSoccerPlayerTeamDTO;
 import com.roy.querydsl.dto.SoccerPlayerSearchDTO;
 import com.roy.querydsl.dto.SoccerPlayerTeamDTO;
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.util.StringUtils;
 
@@ -27,11 +30,13 @@ import static com.roy.querydsl.domain.QSoccerPlayer.*;
 import static com.roy.querydsl.domain.QTeam.team;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
-public class SoccerPlayerDslRepositoryImpl implements SoccerPlayerDslRepository {
+public class SoccerPlayerDslRepositoryImpl extends QuerydslRepositorySupport
+        implements SoccerPlayerDslRepository {
 
     private final JPAQueryFactory query;
 
     public SoccerPlayerDslRepositoryImpl(EntityManager entityManager) {
+        super(SoccerPlayer.class);
         this.query = new JPAQueryFactory(entityManager);
     }
 
@@ -83,6 +88,24 @@ public class SoccerPlayerDslRepositoryImpl implements SoccerPlayerDslRepository 
                         weightGt(dto.getWeightGt()));
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
+    public Page<SoccerPlayerTeamDTO> searchWithRepositorySupport(SoccerPlayerSearchDTO dto, Pageable pageable) {
+        JPQLQuery<SoccerPlayerTeamDTO> searchQuery = from(soccerPlayer)
+                .leftJoin(soccerPlayer.team, team)
+                .where(
+                        playerNameEq(dto.getPlayerName()),
+                        teamNameEq(dto.getTeamName()),
+                        heightGt(dto.getHeightGt()),
+                        weightGt(dto.getWeightGt()))
+                .select(new QSoccerPlayerTeamDTO(
+                        soccerPlayer.id, soccerPlayer.name,
+                        soccerPlayer.team.id, soccerPlayer.team.name));
+
+        JPQLQuery<SoccerPlayerTeamDTO> jpqlQuery = getQuerydsl().applyPagination(pageable, searchQuery);
+
+        QueryResults<SoccerPlayerTeamDTO> result = jpqlQuery.fetchResults();
+        return new PageImpl(result.getResults(), pageable, result.getTotal());
     }
 
     public Page<SoccerPlayerTeamDTO> searchPageWithSort(SoccerPlayerSearchDTO dto, Pageable pageable) {
