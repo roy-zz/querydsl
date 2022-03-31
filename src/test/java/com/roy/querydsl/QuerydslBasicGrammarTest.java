@@ -757,4 +757,64 @@ public class QuerydslBasicGrammarTest {
         return nonNull(targetWeight) ? soccerPlayer.weight.gt(targetWeight) : null;
     }
 
+    @Test
+    @Order(35)
+    @DisplayName("수정 벌크 연산 테스트")
+    void bulkUpdateTest() {
+        assertDoesNotThrow(() -> {
+            query
+                    .update(soccerPlayer)
+                    .set(soccerPlayer.height, soccerPlayer.height.add(10))
+                    .where(soccerPlayer.name.eq("Roy"))
+                    .execute();
+        });
+        flushAndClear();
+        SoccerPlayer roy = query
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchOne();
+
+        assertNotNull(roy);
+        assertEquals("Roy", roy.getName());
+        assertEquals(183, roy.getHeight());
+    }
+
+    @Test
+    @Order(36)
+    @DisplayName("삭제 벌크 연산 테스트")
+    void bulkDeleteTest() {
+        assertDoesNotThrow(() -> {
+            query
+                    .delete(soccerPlayer)
+                    .where(soccerPlayer.name.isNull())
+                    .execute();
+        });
+    }
+
+    @Test
+    @Order(37)
+    @DisplayName("SQL Function Replace 테스트")
+    void sqlFunctionReplaceTest() {
+        String result = query
+                .select(Expressions.stringTemplate("FUNCTION('replace', {0}, {1}, {2})",
+                        soccerPlayer.name, "Roy", "HandsomeRoy"))
+                .from(soccerPlayer)
+                .where(soccerPlayer.name.eq("Roy"))
+                .fetchFirst();
+
+        assertEquals("HandsomeRoy", result);
+    }
+
+    @Test
+    @Order(38)
+    @DisplayName("소문자 이름 비교 테스트")
+    void sqlFunctionLowerTest() {
+        SoccerPlayer roy = query
+                .selectFrom(soccerPlayer)
+                .where(soccerPlayer.name.lower().eq("roy"))
+                .fetchFirst();
+
+        assertEquals("Roy", roy.getName());
+    }
+
 }
