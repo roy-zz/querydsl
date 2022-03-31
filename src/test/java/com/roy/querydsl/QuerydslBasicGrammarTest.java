@@ -1,10 +1,12 @@
 package com.roy.querydsl;
 
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
@@ -19,18 +21,22 @@ import com.roy.querydsl.dto.StrangeSoccerPlayerDTO;
 import org.hibernate.Hibernate;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.platform.commons.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 import java.util.List;
+import java.util.Objects;
 
 import static com.querydsl.jpa.JPAExpressions.*;
 import static com.roy.querydsl.domain.QSoccerPlayer.soccerPlayer;
 import static com.roy.querydsl.domain.QTeam.team;
+import static java.util.Objects.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.MethodOrderer.*;
+import static org.junit.platform.commons.util.StringUtils.*;
 
 @Transactional
 @SpringBootTest
@@ -686,6 +692,69 @@ public class QuerydslBasicGrammarTest {
                 .fetchOne();
 
         assertEquals(dslDTO, pureJpaDTO);
+    }
+
+    @Test
+    @Order(33)
+    @DisplayName("BooleanBuilder를 사용한 동적 쿼리 테스트")
+    void dynamicQueryUsingBooleanBuilderTest() {
+        String nameInParam = "Roy";
+        Integer heightInParam = 170;
+        List<SoccerPlayer> storedPlayers = searchPlayerByBooleanBuilder(nameInParam, heightInParam);
+
+        assertEquals(1, storedPlayers.size());
+        storedPlayers.forEach(player -> {
+            assertEquals("Roy", player.getName());
+        });
+    }
+
+    private List<SoccerPlayer> searchPlayerByBooleanBuilder(String targetName, Integer targetHeight) {
+        BooleanBuilder booleanBuilder = new BooleanBuilder();
+        if (nonNull(targetName)) {
+            booleanBuilder.and(soccerPlayer.name.eq(targetName));
+        }
+        if (nonNull(targetHeight)) {
+            booleanBuilder.and(soccerPlayer.height.gt(targetHeight));
+        }
+        return query
+                .selectFrom(soccerPlayer)
+                .where(booleanBuilder)
+                .fetch();
+    }
+
+    @Test
+    @Order(34)
+    @DisplayName("Where절의 다중 파라미터를 사용한 동적 쿼리 테스트")
+    void dynamicQueryUsingWhereStateTest() {
+        String nameInParam = "Roy";
+        Integer heightInParam = 170;
+
+        List<SoccerPlayer> storedPlayers = searchPlayerByWhereState(nameInParam, heightInParam);
+        assertEquals(1, storedPlayers.size());
+        storedPlayers.forEach(player -> {
+            assertEquals("Roy", player.getName());
+        });
+    }
+
+    private List<SoccerPlayer> searchPlayerByWhereState(String targetName, Integer targetHeight) {
+        return query
+                .selectFrom(soccerPlayer)
+                .where(
+                        nameEq(targetName),
+                        heightGt(targetHeight))
+                .fetch();
+    }
+
+    private BooleanExpression nameEq(String targetName) {
+        return isNotBlank(targetName) ? soccerPlayer.name.eq(targetName) : null;
+    }
+
+    private BooleanExpression heightGt(Integer targetHeight) {
+        return nonNull(targetHeight) ? soccerPlayer.height.gt(targetHeight) : null;
+    }
+
+    private BooleanExpression weightGt(Integer targetWeight) {
+        return nonNull(targetWeight) ? soccerPlayer.weight.gt(targetWeight) : null;
     }
 
 }
